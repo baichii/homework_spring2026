@@ -20,7 +20,7 @@ from hw1_imitation.data import (
     load_pusht_zarr,
 )
 from hw1_imitation.model import build_policy, PolicyType
-from hw1_imitation.evaluation import Logger
+from hw1_imitation.evaluation import Logger, evaluate_policy
 
 LOGDIR_PREFIX = "exp"
 
@@ -128,6 +128,50 @@ def run_training(config: TrainConfig) -> None:
     logger = Logger(log_dir)
 
     ### TODO: PUT YOUR MAIN TRAINING LOOP HERE ###
+    optimizer = torch.optim.Adam(
+        model.parameters(), lr=config.lr, weight_decay=config.weight_decay
+    )
+
+    global_step = 0
+    for epoch in range(config.num_epochs):
+        print(f"epoch: {epoch}")
+        num = 0
+        for state, action_chunk in loader:
+            num += 1
+            print(f"epoch {epoch}: {num}")
+            state = state.to(device)
+            action_chunk = action_chunk.to(device)
+
+            model.train()
+            loss = model.compute_loss(state, action_chunk)
+            optimizer.zero_grad(set_to_none=True)
+            loss.backward()
+            optimizer.step()
+
+            global_step += 1
+
+            if global_step % config.log_interval == 0:
+                logger.log(
+                    {
+                        "train/loss": float(loss.item()),
+                        "train/epoch": epoch,
+                        "train/lr": optimizer.param_groups[0]["lr"],
+                    },
+                    step=global_step,
+                )
+
+            if global_step % config.eval_interval != 0:
+                evaluate_policy(
+                    model=model,
+                    normalizer=normalizer,
+                    device=device,
+                    chunk_size=config.chunk_size,
+                    video_size=config.video_size,
+                    num_video_episodes=config.num_video_episodes,
+                    flow_num_steps=config.flow_num_steps,
+                    step=global_step,
+                    logger=logger
+                )
 
     logger.dump_for_grading()
 
