@@ -7,6 +7,7 @@ from torch import optim
 import numpy as np
 import torch
 from torch import distributions
+from torch.special import logit
 
 from infrastructure import pytorch_util as ptu
 
@@ -59,10 +60,9 @@ class MLPPolicy(nn.Module):
     @torch.no_grad()
     def get_action(self, obs: np.ndarray) -> np.ndarray:
         """Takes a single observation (as a numpy array) and returns a single action (as a numpy array)."""
-        # TODO: implement get_action
-        action = None
-
-        return action
+        dist = self.forward(ptu.from_numpy(obs))
+        action = dist.sample()
+        return ptu.to_numpy(action)
 
     def forward(self, obs: torch.FloatTensor):
         """
@@ -71,11 +71,12 @@ class MLPPolicy(nn.Module):
         flexible objects, such as a `torch.distributions.Distribution` object. It's up to you!
         """
         if self.discrete:
-            # TODO: define the forward pass for a policy with a discrete action space.
-            pass
+            logits = self.logits_net(obs)
+            return torch.distributions.Categorical(logits=logits)
         else:
-            # TODO: define the forward pass for a policy with a continuous action space.
-            pass
+            mean = self.mean_net(obs)
+            std = torch.exp(self.logstd)
+            return torch.distributions.Normal(mean, std)
 
     def update(self, obs: np.ndarray, actions: np.ndarray, *args, **kwargs) -> dict:
         """
@@ -99,12 +100,38 @@ class MLPPolicyPG(MLPPolicy):
         actions = ptu.from_numpy(actions)
         advantages = ptu.from_numpy(advantages)
 
-        # TODO: compute the policy gradient actor loss
-        loss = None
+        dist = self.forward(obs)
+        if self.discrete:
+            actions = actions.long()
+        log_prob = dist.log_prob(actions)
 
-        # TODO: perform an optimizer step
-        pass
+        if not self.discrete:
+            log_prob = log_prob.sum(dim=-1)
+
+        loss = -(log_prob * advantages).mean()
+
+        self.optimizer.zero_grad()
+        loss.backward()
+        self.optimizer.step()
 
         return {
             "Actor Loss": loss.item(),
         }
+
+
+def test_mlp_policy():
+    test_mlp_policy = MLPPolicyPG(
+        ac_dim=2,
+        ob_dim=2,
+        discrete=True,
+        n_layers=4,
+        layer_size=32,
+        learning_rate=1e-3,
+    )
+    test_tensor = np.random.randn(4, 2)
+    res = test_mlp_policy(ptu.from_numpy(test_tensor))
+    print("res: ", res)
+
+
+if __name__ == '__main__':
+    test_mlp_policy()
