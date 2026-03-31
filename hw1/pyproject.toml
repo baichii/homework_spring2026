@@ -10,6 +10,7 @@ dependencies = [
     "imageio>=2.37.2",
     "imageio-ffmpeg>=0.6.0",
     "modal>=1.2.6",
+    "numpy<2",
     "pymunk<7",
     "ruff>=0.14.10",
     "setuptools>=80.9.0",
