@@ -127,10 +127,11 @@ def setup_wandb(
     project='project',
     group=None,
     name=None,
-    mode='online',
+    mode='offline',
     config=None,
 ):
     """Set up Weights & Biases for logging."""
+    mode=os.environ.get("WANDB_MODE", mode)
     wandb_output_dir = tempfile.mkdtemp()
     # Truncate tag to max 64 characters (WandB limit)
     if group is not None and len(group) > 64:

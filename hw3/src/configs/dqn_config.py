@@ -1,6 +1,6 @@
 from typing import Optional, Tuple
 
-import gym
+import gym as gym
 from gym.wrappers.record_episode_statistics import RecordEpisodeStatistics
 from gym.wrappers.frame_stack import FrameStack
 

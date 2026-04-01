@@ -49,7 +49,7 @@ class DQNAgent(nn.Module):
         observation = ptu.from_numpy(np.asarray(observation))[None]
         with torch.no_grad():
             logits = self.critic(observation)
-            rdn = np.random.uniform(1)[0]
+            rdn = np.random.uniform(1)
             if rdn < epsilon:
                 action = torch.randint(0, self.num_actions, (1,),device=ptu.device)
             else:
